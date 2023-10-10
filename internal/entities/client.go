@@ -43,12 +43,13 @@ func (c *Client) Read() {
 		c.conn.Close()
 	}()
 	c.conn.SetReadLimit(readMaxSize)                 //設置每次讀取前端給的訊息大小,超過會報錯
-	c.conn.SetReadDeadline(time.Now().Add(pongWait)) //設定 超時時間
+	c.conn.SetReadDeadline(time.Now().Add(pongWait)) //設定 讀的超時時間
 
-	c.conn.SetPongHandler(func(appData string) error { //當client端 pong 回來 所要做的動作
-		if err := c.conn.SetReadDeadline(time.Now().Add(pongWait)); err != nil { // 設置 等待回應的超時時間
+	c.conn.SetPongHandler(func(appData string) error { //這邊會自動讀取到前端回應的pong訊息,所以上面SetReadDeadline的超時間不會觸發,因為已經讀到pong消息了
+		if err := c.conn.SetReadDeadline(time.Now().Add(pongWait)); err != nil { // 設置 讀的回應超時時間
 			return err
 		}
+		log.Println("Pong Handler")
 		return nil
 	})
 
@@ -70,6 +71,7 @@ func (c *Client) Read() {
 			} else { //除了第一次來的message是使用者名稱,後面的都是使用者輸入的對話內容,並將對話內容塞入hub中的broadcast channel
 				c.hub.broadcast <- bytes.Join([][]byte{c.frontName, msg}, []byte(": ")) //bytes.Join這邊主要是將名稱加上冒號跟內容 e.g. jason: hello
 			}
+			log.Printf("前端回應:%s \n", string(msg))
 		}
 
 	}
@@ -106,7 +108,7 @@ func (c *Client) Write() {
 					return
 				}
 			}()
-			if err := c.conn.SetWriteDeadline(time.Now().Add(writeWait)); err != nil { //設定超時時間,這邊是設置10秒,超過就會中斷websocket連線
+			if err := c.conn.SetWriteDeadline(time.Now().Add(writeWait)); err != nil { //設定寫的超時時間,這邊是設置10秒,超過就會中斷websocket連線
 				log.Printf("SetWriteDeadline error:%s \n", err.Error())
 				return
 			}
@@ -115,7 +117,7 @@ func (c *Client) Write() {
 				return
 			}
 
-			if _, err = writer.Write(newLine); err != nil { //發送換行符號到client端
+			if _, err = writer.Write(newLine); err != nil { //發送換行符號到client端, 如果超時會回報錯誤
 				log.Printf("write newLine error :%s \n", err.Error())
 				return
 			}
@@ -132,9 +134,9 @@ func (c *Client) Write() {
 				}
 			}
 
-		case <-ticker.C: //計時器,為了定時做某些事情
+		case <-ticker.C: //計時器,為了定時做某些事情 e.g. 定期ping前端在不在
 
-			if err := c.conn.SetReadDeadline(time.Now().Add(writeWait)); err != nil { //設定超時時間
+			if err := c.conn.SetWriteDeadline(time.Now().Add(writeWait)); err != nil { //設定寫的超時時間
 				log.Printf("SetReadDeadline error: %s", err.Error())
 				return
 			}
