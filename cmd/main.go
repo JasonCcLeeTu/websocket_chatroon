@@ -13,10 +13,10 @@ func main() {
 	flag.Parse()
 	hub := entities.NewHub()
 	go hub.Run()
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) { //瀏覽器 http://localhost:3434/  會開啟index.html
 		http.ServeFile(w, r, "index.html")
 	})
-	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) { // client打websocket
 		entities.WsServie(hub, w, r)
 	})
 	log.Println(":" + *port)
