@@ -42,10 +42,10 @@ func (c *Client) Read() {
 		c.conn.Close()
 	}()
 
-	c.conn.SetReadDeadline(time.Now().Add(pongWait))
+	c.conn.SetReadDeadline(time.Now().Add(pongWait)) //設定 超時時間
 
-	c.conn.SetPongHandler(func(appData string) error {
-		if err := c.conn.SetReadDeadline(time.Now().Add(pongWait)); err != nil {
+	c.conn.SetPongHandler(func(appData string) error { //當client端 pong 回來 所要做的動作
+		if err := c.conn.SetReadDeadline(time.Now().Add(pongWait)); err != nil { // 設置 等待回應的超時時間
 			return err
 		}
 		return nil
